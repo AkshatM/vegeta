@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
@@ -26,11 +27,15 @@ type Target struct {
 	URL    string      `json:"url"`
 	Body   []byte      `json:"body,omitempty"`
 	Header http.Header `json:"header,omitempty"`
+	BodyContainsTimestamp bool `json:"bodyContainsTimestamp,omitempty"`
 }
 
 // Request creates an *http.Request out of Target and returns it along with an
 // error in case of failure.
 func (t *Target) Request() (*http.Request, error) {
+	if t.BodyContainsTimestamp {
+		t.Body = []byte(time.Now().Format(time.RFC3339))
+	}
 	req, err := http.NewRequest(t.Method, t.URL, bytes.NewReader(t.Body))
 	if err != nil {
 		return nil, err

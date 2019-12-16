@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestTargetRequest(t *testing.T) {
@@ -58,6 +59,48 @@ func TestTargetRequest(t *testing.T) {
 	}
 }
 
+func TestTargetRequestWithBodyTimestamp(t *testing.T) {
+	t.Parallel()
+
+	tgt := Target{
+		Method: "GET",
+		URL:    "http://:9999/",
+		Header: http.Header{
+			"X-Some-Header":       []string{"1"},
+			"X-Some-Other-Header": []string{"2"},
+			"X-Some-New-Header":   []string{"3"},
+			"Host":                []string{"lolcathost"},
+		},
+		BodyContainsTimestamp: true,
+	}
+	req, _ := tgt.Request()
+
+	reqBody, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	requestTime, err := time.Parse(time.RFC3339, string(reqBody))
+	if err != nil {
+		t.Error(err)
+	}
+	if requestTime.Day() != time.Now().Day() {
+		t.Error(requestTime)
+	}
+
+	tgt.Header.Set("X-Stuff", "0")
+	if req.Header.Get("X-Stuff") == "0" {
+		t.Error("Each Target must have its own Header")
+	}
+
+	want, got := tgt.Header.Get("Host"), req.Header.Get("Host")
+	if want != got {
+		t.Fatalf("Target Header wasn't copied correctly. Want: %s, Got: %s", want, got)
+	}
+	if req.Host != want {
+		t.Fatalf("Target Host wasn't copied correctly. Want: %s, Got: %s", want, req.Host)
+	}
+}
 func TestJSONTargeter(t *testing.T) {
 	target := func(s string) io.Reader {
 		return strings.NewReader(s + "\n")
