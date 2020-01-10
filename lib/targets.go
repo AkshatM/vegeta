@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,7 +35,9 @@ type Target struct {
 // error in case of failure.
 func (t *Target) Request() (*http.Request, error) {
 	if t.BodyContainsTimestamp {
-		t.Body = []byte(time.Now().Format(time.RFC3339))
+		// generate a Unix timestamp in milliseconds
+		current_time := time.Now().UnixNano() / 1e6
+		t.Body = []byte(strconv.FormatInt(current_time, 10))
 	}
 	req, err := http.NewRequest(t.Method, t.URL, bytes.NewReader(t.Body))
 	if err != nil {
